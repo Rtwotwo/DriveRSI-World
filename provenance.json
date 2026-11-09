@@ -1,0 +1,6 @@
+{
+  "extracted_from": "DriveRSI-Policy",
+  "source_commit": "9b383308607481c3da3bb0b3e2c54ff1f38b2644",
+  "upstream": "src/simulation/provenance.json",
+  "scope": "scene synthesis and qualification extracted; training and teacher remain Policy"
+}

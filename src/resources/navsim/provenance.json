@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/autonomousvision/navsim",
+  "copied_from_existing_owned_navsim": true,
+  "rosters": {
+    "navtrain": {
+      "source": "navsim/planning/script/config/common/train_test_split/scene_filter/navtrain.yaml",
+      "sha256": "c37fea567a0cfdbc29076cca893d4f5dd32db59baec18ae214527206d6b64e6f"
+    },
+    "navtest": {
+      "source": "navsim/planning/script/config/common/train_test_split/scene_filter/navtest.yaml",
+      "sha256": "61284edf5003c0291f843ce9817c822ba306609a62d54544223adae3fc7fc9cd"
+    }
+  }
+}
