@@ -23,6 +23,7 @@ include-package-data = false
 [tool.setuptools.package-data]
 "driversi_world" = ["resources/navsim/*.yaml", "resources/navsim/LICENSE", "resources/navsim/provenance.json"]
 "driversi_world.simulation" = ["LICENSE", "provenance.json", "configs/**/*.yaml", "configs/*.yaml"]
+"driversi_world.world_models.hyperflow" = ["LICENSE", "NOTICE.txt", "provenance.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

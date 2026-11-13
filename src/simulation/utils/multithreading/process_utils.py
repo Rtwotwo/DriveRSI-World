@@ -6,7 +6,13 @@ logger = logging.getLogger(__name__)
 
 def get_process_id() -> str:
 
-    import ray
+    # Direct single-process execution must not require the optional Ray scheduler.
+    try:
+        import ray
+    except ModuleNotFoundError as exc:
+        if exc.name != 'ray':
+            raise
+        return str(os.getpid())
     if ray.is_initialized():
         gpu_ids = ray.get_gpu_ids()
         if len(gpu_ids) > 0:

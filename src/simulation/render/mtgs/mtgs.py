@@ -26,6 +26,9 @@ from driversi_world.simulation.render.mtgs.utils.portable_utils import convert_t
 from driversi_world.simulation.render.mtgs.gaussian_model.vanilla_gaussian_splatting import VanillaPortableGaussianModel as VanillaModel
 from driversi_world.simulation.render.mtgs.gaussian_model.rigid_object import RigidPortableSubModel as RigidModel
 from driversi_world.simulation.render.mtgs.gaussian_model.rigid_object_mirrored import MirroredRigidPortableSubModel as MirroredModel
+from driversi_world.simulation.render.mtgs.state import (
+    agent_state_key, camera_state_key, reconstruction_agent_states,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +93,7 @@ class MTGSRenderEngine(BaseRenderer):
         self.node_types = {}
         self.submodel_names = {}
         self.timestamp = None
+        self.world_cache_key = None
         self.sensor_mapping = {}
 
     def _init_gaussian_models(self):
@@ -201,7 +205,8 @@ class MTGSRenderEngine(BaseRenderer):
         return torch.from_numpy(transform).float()
 
     def set_sensors(self, sensors, ego2global):
-        if self.sensor_caches is not None:
+        sensor_key = camera_state_key(sensors)
+        if self.sensor_caches is not None and getattr(self, 'sensor_cache_key', None) == sensor_key:
             camera_to_egos, intrinsics, map_inverse_distorts, hw_dict = self.sensor_caches
             camera_to_worlds = torch.einsum("ij,bjk->bik", ego2global, camera_to_egos)
             return camera_to_worlds, intrinsics, map_inverse_distorts, hw_dict
@@ -214,7 +219,7 @@ class MTGSRenderEngine(BaseRenderer):
         for idx, (cam_name, cam_info) in enumerate(sensors.items()):
             self.sensor_mapping[cam_name] = idx
             sensor2ego = self.get_transform_matrix(
-                rotation=cam_info["sensor2ego_rotation"], 
+                rotation=cam_info["sensor2ego_rotation"],
                 translation=cam_info["sensor2ego_translation"]
             ).squeeze().to(self.device)             # 4 x 4
 
@@ -241,12 +246,15 @@ class MTGSRenderEngine(BaseRenderer):
         height = height if isinstance(height, int) else height.item()
         width = width if isinstance(width, int) else width.item()
         self.sensor_caches = (sensor2egos, intrinsics, map_inverse_distorts, {"height": height, "width": width})
+        self.sensor_cache_key = sensor_key
 
         camera_to_worlds = torch.einsum("ij,bjk->bik", ego2global, sensor2egos)
         return camera_to_worlds, intrinsics, map_inverse_distorts, {"height": height, "width": width}
 
     def update_world(self, timestamp, agent_states):
-        if self.timestamp == timestamp:
+        # Time alone is insufficient for counterfactual actor edits and branch resets.
+        world_key = agent_state_key(timestamp, agent_states)
+        if getattr(self, 'world_cache_key', None) == world_key:
             return
         self.timestamp = timestamp
         if hasattr(self, "collected_gaussians"):
@@ -275,9 +283,10 @@ class MTGSRenderEngine(BaseRenderer):
                 continue
             for k in gs_dict.keys():
                 gs_dict[k].append(gs[k].to(self.device))
-            
+
         for key, value in gs_dict.items():
             self.collected_gaussians[key] = torch.cat(value, dim=0)
+        self.world_cache_key = world_key
 
     def update_gaussian_rgbs(self, camera_to_worlds):
         rgb_list = []
@@ -301,9 +310,9 @@ class MTGSRenderEngine(BaseRenderer):
     @torch.no_grad()
     def render(self, render_state: RenderState):
         timestamp = render_state[RenderState.TIMESTAMP]
-        agent_states = render_state[RenderState.AGENT_STATE]
-        for agent_state in agent_states.values():
-            agent_state[:2] -= self.recon2global_translation[:2]
+        # Renderer coordinates are private; returned metadata retains global poses.
+        agent_states = reconstruction_agent_states(
+            render_state[RenderState.AGENT_STATE], self.recon2global_translation)
 
         self.update_world(
             timestamp=timestamp,
@@ -318,7 +327,7 @@ class MTGSRenderEngine(BaseRenderer):
             ego2global=ego2global,
         )
         self.update_gaussian_rgbs(camera_to_worlds)
-        
+
         # shift the camera to center of scene looking at center
         R = camera_to_worlds[:, :3, :3]     # C x 3 x 3
         T = camera_to_worlds[:, :3, 3:4]    # C x 3 x 1
@@ -326,7 +335,7 @@ class MTGSRenderEngine(BaseRenderer):
         R_inv = R.transpose(1,2)            # C x 3 x 3
         T_inv = -R_inv @ T
         viewmat = self.get_transform_matrix(
-                rotation=R_inv, 
+                rotation=R_inv,
                 translation=T_inv
             ).to(self.device)               # C x 4 x 4
 
@@ -376,10 +385,10 @@ class MTGSRenderEngine(BaseRenderer):
             for image_key in outputs.keys():
                 sensor_dict[cam_name][image_key] = cv2.remap(
                     outputs[image_key][cam_idx],
-                    map_inverse_distorts[cam_idx][0], 
+                    map_inverse_distorts[cam_idx][0],
                     map_inverse_distorts[cam_idx][1], cv2.INTER_LINEAR)
         return_dict = {
-            'cameras': sensor_dict, 
+            'cameras': sensor_dict,
             'lidars': {}    # TODO: support LiDAR rendering
         }
 

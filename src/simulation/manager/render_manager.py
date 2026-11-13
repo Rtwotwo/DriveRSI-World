@@ -52,7 +52,7 @@ class RenderManager(BaseManager):
         # TODO: pertube camera location by timeshift.
         render_state[RenderState.CAMERAS] = self.current_scene[SD.CAMERAS]
         render_state[RenderState.LIDAR] = self.current_scene[SD.LIDAR]
-        
+
         return self.renderer.render(render_state)
 
     def before_reset(self):
@@ -82,7 +82,9 @@ class RenderManager(BaseManager):
         self.rendering_results[step] = render_results
 
         # trigger data saving after getting the render results
-        self.engine.managers['data_manager'].save_current_frame_data()
+        # Diagnostic environments can render without exporting NAVSIM training data.
+        if 'data_manager' in self.engine.managers:
+            self.engine.managers['data_manager'].save_current_frame_data()
 
         return render_results
 

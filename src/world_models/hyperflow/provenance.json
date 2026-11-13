@@ -1,0 +1,32 @@
+{
+  "source": "https://github.com/Video-Rebirth/hyperflow-h3-flash",
+  "commit": "0767e9cd7c72bf7aa832b07ebe1cdbd5daa80295",
+  "license": "Apache-2.0",
+  "retained_core": [
+    "blocks.py",
+    "schedule.py",
+    "int8.py",
+    "transformer.py",
+    "offload.py"
+  ],
+  "omitted": [
+    "ComfyUI",
+    "CLI",
+    "hostmem",
+    "multi-GPU framework",
+    "FP8 text encoder loader"
+  ],
+  "modifications": [
+    "Owned relative imports and bounded offline loader",
+    "Optional module-level Triton imports for PyTorch 2.7 / Triton 3.3 JIT annotations",
+    "Experiment-only visual proposal runner with image-space diagnostics"
+  ],
+  "no_runtime_reference_checkout_dependency": true,
+  "upstream_file_sha256": {
+    "blocks.py": "9baef991e7e162c970a8f47b2e1e28d8a273db19b37d9ac70587a8822051112c",
+    "schedule.py": "6dc16c0dae327643c96c97470de9a694a9b3d92b7058f65919ca28dc246dceca",
+    "int8.py": "ad4ca921ebdc71d54780e8f36e6a4a0ddbf29e415b037a828141ea955e1cc049",
+    "transformer.py": "0c9e6c34c4cf5170a03c41bbff61923fb82bd1fb4ab85cd48f4032d196685449",
+    "offload.py": "e309d89ee99d56158032e149a0ec7f62461d10d98fef8eb30ed2d368480e94cc"
+  }
+}
